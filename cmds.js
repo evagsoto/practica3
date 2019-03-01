@@ -1,5 +1,3 @@
-
-
 const {log, biglog, errorlog, colorize} = require("./out");
 
 const model = require('./model');
@@ -151,8 +149,30 @@ exports.editCmd = (rl, id) => {
  * @param id Clave del quiz a probar.
  */
 exports.testCmd = (rl, id) => {
-    log('Probar el quiz indicado.', 'red');
-    rl.prompt();
+   if (typeof id === "undefined"){
+        errorlog(`Falta el parámetro id.`);
+        rl.prompt();
+    } else{
+        try{
+
+            const quiz = model.getByIndex(id);
+
+            rl.question(colorize(`${quiz.question}? `, 'red'), answer => {
+
+                if (answer.trim().toUpperCase() === quiz.answer.trim().toUpperCase()){
+                    log("Su respuesta es correcta.");
+                    biglog("Correcta", "green");
+                } else {
+                    log("Su respuesta es incorrecta.");
+                    biglog("Incorrecta", "red");
+                }
+                rl. prompt();
+            });
+        } catch(error){
+            errorlog(error.message);
+            rl.prompt();
+        }
+    }
 };
 
 
@@ -162,11 +182,46 @@ exports.testCmd = (rl, id) => {
  *
  * @param rl Objeto readline usado para implementar el CLI.
  */
-exports.playCmd = rl => {
-    log('Jugar.', 'red');
-    rl.prompt();
-};
+exports.playCmd = rl =>{
 
+    let score = 0;
+    let toBeResolved = []; //ids que quedan por preguntar
+    for(let i=0; i<model.count(); ++i){
+        toBeResolved[i]=i;
+    }
+
+    const playOne = () =>{
+        if(toBeResolved.length === 0){ // Si no quedan preguntas por resolver
+            log('No hay nada más que preguntar.');
+            log(`Fin del juego. Aciertos: ${score}`);
+            biglog(`${score}`, "magenta");
+            rl.prompt();
+        }else{
+            let id = Math.round(Math.random() * (toBeResolved.length -1)); //Obtengo un ID aleatorio de la pregunta
+            let aux = toBeResolved[id];
+            toBeResolved.splice(id, 1); //Elimino ese id del array de preguntas que quedan
+
+            const quiz = model.getByIndex(aux);
+
+            rl.question(colorize(`${quiz.question}? `, 'red'), answer => {
+
+                if (answer.trim().toUpperCase() === quiz.answer.trim().toUpperCase()){
+                    score++;
+                    log(`CORRECTO - Lleva ${score} aciertos.`);
+                    playOne();
+                } else {
+                    log('INCORRECTO.');
+                    log(`Fin del juego. Aciertos: ${score}`);
+                    biglog(`${score}`, "magenta");
+                    rl.prompt();
+                }
+            });
+        }
+    }
+
+    playOne();
+
+}
 
 /**
  * Muestra los nombres de los autores de la práctica.
@@ -175,7 +230,7 @@ exports.playCmd = rl => {
  */
 exports.creditsCmd = rl => {
     log('Autores de la práctica:');
-    log('Nombre 1', 'green');
+    log('Eva García Soto', 'green');
     log('Nombre 2', 'green');
     rl.prompt();
 };
@@ -189,4 +244,3 @@ exports.creditsCmd = rl => {
 exports.quitCmd = rl => {
     rl.close();
 };
-
